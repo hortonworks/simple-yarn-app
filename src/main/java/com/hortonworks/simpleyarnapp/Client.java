@@ -36,7 +36,8 @@ public class Client {
   public void run(String[] args) throws Exception {
     final String command = args[0];
     final int n = Integer.valueOf(args[1]);
-    final Path jarPath = new Path(args[2]);
+    Path jarPath = new Path(args[2]);
+    jarPath = FileSystem.get(conf).makeQualified(jarPath);
 
     // Create yarnClient
     YarnConfiguration conf = new YarnConfiguration();
