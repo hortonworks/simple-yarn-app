@@ -58,6 +58,11 @@ public class ApplicationMaster {
 
     // Obtain allocated containers and launch 
     int allocatedContainers = 0;
+    // We need to start counting completed containers while still allocating
+    // them since intial ones may complete while we're allocating subsequent
+    // containers and if we miss those notifications, we'll never see them again
+    // and this ApplicationMaster will hang indefinitely.
+    int completedContainers = 0;
     while (allocatedContainers < n) {
       AllocateResponse response = rmClient.allocate(0);
       for (Container container : response.getAllocatedContainers()) {
@@ -75,11 +80,14 @@ public class ApplicationMaster {
         System.out.println("Launching container " + allocatedContainers);
         nmClient.startContainer(container, ctx);
       }
+      for (ContainerStatus status : response.getCompletedContainersStatuses()) {
+        ++completedContainers;
+        System.out.println("Completed container " + completedContainers);
+      }
       Thread.sleep(100);
     }
 
-    // Now wait for containers to complete
-    int completedContainers = 0;
+    // Now wait for the remaining containers to complete 
     while (completedContainers < n) {
       AllocateResponse response = rmClient.allocate(completedContainers/n);
       for (ContainerStatus status : response.getCompletedContainersStatuses()) {
