@@ -34,9 +34,9 @@ public class Client {
   Configuration conf = new YarnConfiguration();
   
   public void run(String[] args) throws Exception {
-    final String command = args[0];
-    final int n = Integer.valueOf(args[1]);
-    final Path jarPath = new Path(args[2]);
+    final String command = args[1];
+    final int n = Integer.valueOf(args[2]);
+    final Path jarPath = new Path(args[3]);
 
     // Create yarnClient
     YarnConfiguration conf = new YarnConfiguration();
