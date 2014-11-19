@@ -130,6 +130,8 @@ public class ApplicationMasterAsync implements AMRMClientAsync.CallbackHandler {
         // Un-register with ResourceManager
         rmClient.unregisterApplicationMaster(
                 FinalApplicationStatus.SUCCEEDED, "", "");
+        nmClient.close();
+        rmClient.close();
         System.out.println("[AM] unregisterApplicationMaster 1");
     }
 }
