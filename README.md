@@ -15,8 +15,8 @@ $ bin/hadoop jar $HADOOP_YARN_HOME/share/hadoop/yarn/hadoop-yarn-applications-un
 
 ### Managed mode
 
-$ bin/hadoop fs -copyFromLocal simple-yarn-app-1.0-SNAPSHOT.jar $cluster_name/apps/simple/simple-yarn-app-1.0-SNAPSHOT.jar
+$ bin/hadoop fs -copyFromLocal simple-yarn-app-1.0-SNAPSHOT.jar $cluster_name/apps/simple/simple-yarn-app-1.1.0.jar
 
-$ bin/hadoop jar simple-yarn-app-1.0-SNAPSHOT.jar com.hortonworks.simpleyarnapp.Client $sample_command 2 $cluster_name/apps/simple/simple-yarn-app-1.0-SNAPSHOT.jar
+$ bin/hadoop jar simple-yarn-app-1.0-SNAPSHOT.jar com.hortonworks.simpleyarnapp.Client $sample_command 2 $cluster_name/apps/simple/simple-yarn-app-1.1.0.jar
 
     
