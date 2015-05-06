@@ -1,21 +1,26 @@
 package com.hortonworks.simpleyarnapp;
 
-import java.util.Collections;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
-import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
-import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.NMClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.util.Apps;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class ApplicationMaster {
 
@@ -23,6 +28,7 @@ public class ApplicationMaster {
 
     final String command = args[0];
     final int n = Integer.valueOf(args[1]);
+    final Path appJarPath = new Path(args[2]);
     
     // Initialize clients to ResourceManager and NodeManagers
     Configuration conf = new YarnConfiguration();
@@ -65,12 +71,37 @@ public class ApplicationMaster {
             // Launch container by create ContainerLaunchContext
             ContainerLaunchContext ctx =
                     Records.newRecord(ContainerLaunchContext.class);
-            ctx.setCommands(
-                    Collections.singletonList(
-                            command +
-                                    " 1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
-                                    " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr"
-                    ));
+
+          // The target app jar file is needed by the container, so link it to the current dir.
+          HashMap res = new HashMap<Path, LocalResource>();
+          LocalResource appHelloJar = Records.newRecord(LocalResource.class);
+          setupAppJar(appJarPath, appHelloJar);
+          res.put("app.jar", appHelloJar);
+          ctx.setLocalResources(res);
+
+          // Set the environment and add current path to the environment.
+          Map<String, String> appMasterEnv = new HashMap<String, String>();
+          setupAppEnv(appMasterEnv);
+          ctx.setEnvironment(appMasterEnv);
+
+          List<String> commands = new ArrayList<String>();
+          commands.add(command +
+            " 1>>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
+            " 2>>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr");
+          commands.add(";date +%s" +
+            " 1>>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
+            " 2>>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr");
+          commands.add(";ls " +
+            " 1>>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
+            " 2>>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr");
+          commands.add(";date +%s" +
+            " 1>>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
+            " 2>>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr");
+          commands.add(";java -cp app.jar com.hortonworks.simpleyarnapp.HelloWorld  " +
+            " 1>>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
+            " 2>>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr");
+          ctx.setCommands(commands);
+
             System.out.println("Launching container " + container.getId());
             nmClient.startContainer(container, ctx);
         }
@@ -84,5 +115,28 @@ public class ApplicationMaster {
     // Un-register with ResourceManager
     rmClient.unregisterApplicationMaster(
         FinalApplicationStatus.SUCCEEDED, "", "");
+  }
+
+  private static void setupAppJar(Path jarPath, LocalResource appMasterJar) throws IOException {
+    Configuration conf = new YarnConfiguration();
+    FileStatus jarStat = FileSystem.get(conf).getFileStatus(jarPath);
+    appMasterJar.setResource(ConverterUtils.getYarnUrlFromPath(jarPath));
+    appMasterJar.setSize(jarStat.getLen());
+    appMasterJar.setTimestamp(jarStat.getModificationTime());
+    appMasterJar.setType(LocalResourceType.FILE);
+    appMasterJar.setVisibility(LocalResourceVisibility.PUBLIC);
+  }
+
+  private static void setupAppEnv(Map<String, String> appMasterEnv) {
+    Configuration conf = new YarnConfiguration();
+    for (String c : conf.getStrings(
+      YarnConfiguration.YARN_APPLICATION_CLASSPATH,
+      YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
+      Apps.addToEnvironment(appMasterEnv, ApplicationConstants.Environment.CLASSPATH.name(),
+        c.trim());
+    }
+    Apps.addToEnvironment(appMasterEnv,
+      ApplicationConstants.Environment.CLASSPATH.name(),
+      ApplicationConstants.Environment.PWD.$() + File.separator + "*"); // Add current dir.
   }
 }
