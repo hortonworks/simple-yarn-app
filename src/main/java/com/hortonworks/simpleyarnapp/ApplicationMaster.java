@@ -81,7 +81,10 @@ public class ApplicationMaster {
           ctx.setEnvironment(appMasterEnv);
 
           List<String> commands = new ArrayList<String>();
-          commands.add("date +%s" +
+          commands.add(command +
+            " 1>>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
+            " 2>>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr");
+          commands.add(";date +%s" +
             " 1>>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
             " 2>>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr");
           commands.add(";ls " +
