@@ -71,11 +71,15 @@ public class ApplicationMaster {
             // Launch container by create ContainerLaunchContext
             ContainerLaunchContext ctx =
                     Records.newRecord(ContainerLaunchContext.class);
+
+          // The target app jar file is needed by the container, so link it to the current dir.
           HashMap res = new HashMap<Path, LocalResource>();
           LocalResource appHelloJar = Records.newRecord(LocalResource.class);
           setupAppJar(appJarPath, appHelloJar);
           res.put("app.jar", appHelloJar);
           ctx.setLocalResources(res);
+
+          // Set the environment and add current path to the environment.
           Map<String, String> appMasterEnv = new HashMap<String, String>();
           setupAppEnv(appMasterEnv);
           ctx.setEnvironment(appMasterEnv);
@@ -133,6 +137,6 @@ public class ApplicationMaster {
     }
     Apps.addToEnvironment(appMasterEnv,
       ApplicationConstants.Environment.CLASSPATH.name(),
-      ApplicationConstants.Environment.PWD.$() + File.separator + "*");
+      ApplicationConstants.Environment.PWD.$() + File.separator + "*"); // Add current dir.
   }
 }
